@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WP Troubleshooter — WordPress Diagnostic Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3d;
+    --wp-blue: #2271b1;
+    --accent: #00d4aa;
+    --accent2: #7c6fff;
+    --warn: #ff6b6b;
+    --text: #e8e8f0;
+    --muted: #7878a0;
+    --success: #00d4aa;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 50px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 6px 16px;
+    border-radius: 100px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .logo-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 300;
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* Step indicator */
+  .steps-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 40px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .step-item.active { color: var(--accent); }
+  .step-item.done { color: var(--accent2); }
+
+  .step-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .step-item.done .step-num {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: white;
+  }
+
+  .step-item.active .step-num {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+
+  .step-line {
+    width: 40px; height: 1px;
+    background: var(--border);
+    margin: 0 8px;
+  }
+
+  /* Main card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.6s 0.3s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Category Grid */
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .cat-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+  }
+
+  .cat-btn:hover {
+    border-color: var(--accent);
+    background: rgba(0,212,170,0.05);
+    transform: translateY(-2px);
+  }
+
+  .cat-btn.selected {
+    border-color: var(--accent);
+    background: rgba(0,212,170,0.08);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .cat-icon {
+    font-size: 22px;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .cat-name {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .cat-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* Problem list */
+  .problem-list {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .problem-list.visible { display: flex; }
+
+  .prob-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    cursor: pointer;
+    text-align: left;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .prob-btn:hover {
+    border-color: var(--accent2);
+    background: rgba(124,111,255,0.05);
+  }
+
+  .prob-btn.selected {
+    border-color: var(--accent2);
+    background: rgba(124,111,255,0.1);
+  }
+
+  .prob-btn::before {
+    content: '→';
+    color: var(--muted);
+    font-size: 12px;
+    transition: color 0.2s;
+  }
+
+  .prob-btn:hover::before, .prob-btn.selected::before {
+    color: var(--accent2);
+  }
+
+  /* Solution panel */
+  .solution-panel {
+    display: none;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .solution-panel.visible { display: block; }
+
+  .severity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+
+  .severity-badge.low { background: rgba(0,212,170,0.15); color: var(--accent); border: 1px solid rgba(0,212,170,0.3); }
+  .severity-badge.medium { background: rgba(255,193,7,0.15); color: #ffc107; border: 1px solid rgba(255,193,7,0.3); }
+  .severity-badge.high { background: rgba(255,107,107,0.15); color: var(--warn); border: 1px solid rgba(255,107,107,0.3); }
+
+  .solution-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  .solution-summary {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  /* Steps */
+  .steps-section { margin-bottom: 28px; }
+
+  .steps-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  .step-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    counter-reset: step-counter;
+  }
+
+  .step-row {
+    display: flex;
+    gap: 0;
+    counter-increment: step-counter;
+    position: relative;
+  }
+
+  .step-row:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 32px;
+    bottom: -4px;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .step-dot {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-right: 16px;
+    margin-bottom: 20px;
+    z-index: 1;
+  }
+
+  .step-dot::before { content: counter(step-counter); }
+
+  .step-content {
+    padding-top: 6px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .step-content code {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+  }
+
+  /* Info boxes */
+  .info-boxes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  @media (max-width: 600px) { .info-boxes { grid-template-columns: 1fr; } }
+
+  .info-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .info-box-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .info-box-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  /* Tags */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+
+  .tag {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #00b894);
+    color: var(--bg);
+  }
+
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,212,170,0.3); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { border-color: var(--muted); background: var(--surface2); }
+
+  /* Back button */
+  .back-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 24px;
+    transition: color 0.2s;
+  }
+
+  .back-btn:hover { color: var(--text); }
+
+  /* Search bar */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 24px;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px 12px 42px;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input::placeholder { color: var(--muted); }
+  .search-input:focus { border-color: var(--accent); }
+
+  .search-icon {
+    position: absolute;
+    left: 14px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 16px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 40px;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    animation: fadeUp 0.6s 0.5s ease both;
+  }
+
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* View: hidden */
+  .view { display: none; }
+  .view.active { display: block; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-badge">WordPress Diagnostic Tool</div>
+    <h1>WP <span>Troubleshooter</span></h1>
+    <p class="subtitle">Select your issue category and get a step-by-step diagnostic guide — no plugins required.</p>
+  </header>
+
+  <!-- STEP BAR -->
+  <div class="steps-bar" id="stepsBar">
+    <div class="step-item active" id="step1">
+      <div class="step-num">1</div>
+      <span>Category</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" id="step2">
+      <div class="step-num">2</div>
+      <span>Problem</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" id="step3">
+      <div class="step-num">3</div>
+      <span>Solution</span>
+    </div>
+  </div>
+
+  <!-- VIEW 1: CATEGORY -->
+  <div class="view active" id="viewCategory">
+    <div class="card">
+      <div class="section-label">Step 01 — Select Category</div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" placeholder="Search issues... e.g. white screen, checkout, 404" id="searchInput" oninput="filterCategories(this.value)">
+      </div>
+      <div class="category-grid" id="categoryGrid">
+        <!-- injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 2: PROBLEM -->
+  <div class="view" id="viewProblem">
+    <div class="card">
+      <button class="back-btn" onclick="goBack('viewCategory')">← Back to Categories</button>
+      <div class="section-label" id="problemLabel">Step 02 — Select Problem</div>
+      <div class="problem-list visible" id="problemList">
+        <!-- injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 3: SOLUTION -->
+  <div class="view" id="viewSolution">
+    <div class="card">
+      <button class="back-btn" onclick="goBack('viewProblem')">← Back to Problems</button>
+      <div class="solution-panel visible" id="solutionContent">
+        <!-- injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Built by <a href="https://github.com/akshayjhorarr" target="_blank">Akshay Jhorar</a> &nbsp;·&nbsp; WordPress Support Specialist &nbsp;·&nbsp; v1.0
+  </div>
+</div>
+
+<script>
+const DATA = {
+  categories: [
+    {
+      id: "white-screen",
+      icon: "🖥️",
+      name: "White Screen / WSOD",
+      desc: "Blank screen, no error shown",
+      problems: [
+        {
+          id: "wsod-plugin",
+          title: "White screen after activating a plugin",
+          severity: "high",
+          time: "5–10 min",
+          rootCause: "Plugin conflict or PHP fatal error triggered on activation",
+          summary: "A newly activated plugin has caused a fatal PHP error, breaking WordPress rendering. This is one of the most common WordPress support issues.",
+          steps: [
+            "Connect to your hosting via FTP or File Manager in cPanel.",
+            "Navigate to <code>/wp-content/plugins/</code> and rename the problematic plugin folder (e.g. add <code>-disabled</code> to the end).",
+            "Reload your site — if it loads, the plugin was the cause.",
+            "Re-enable the plugin and check for updates in <code>Dashboard → Plugins</code>.",
+            "If no update exists, contact the plugin developer or find an alternative plugin.",
+            "Enable <code>WP_DEBUG</code> in <code>wp-config.php</code> to see the actual PHP error for further diagnosis."
+          ],
+          tools: ["FTP / cPanel File Manager", "WP_DEBUG mode", "Error log viewer"],
+          tags: ["plugin-conflict", "PHP-error", "WSOD", "fatal-error"]
+        },
+        {
+          id: "wsod-theme",
+          title: "White screen after switching theme",
+          severity: "high",
+          time: "5–15 min",
+          rootCause: "Theme functions.php PHP error or missing parent theme",
+          summary: "The new theme has a PHP error in functions.php or requires a parent theme that is not installed.",
+          steps: [
+            "Via FTP, go to <code>/wp-content/themes/</code> and rename your active theme folder.",
+            "WordPress will auto-switch to a default theme (Twenty Twenty-Four).",
+            "If site loads, the theme is the issue. Switch to a different theme from the admin.",
+            "Check if the theme requires a parent theme and install it.",
+            "Enable <code>WP_DEBUG</code> to see specific PHP error from the theme."
+          ],
+          tools: ["FTP", "WP_DEBUG", "WordPress admin"],
+          tags: ["theme-error", "PHP-fatal", "functions.php", "parent-theme"]
+        }
+      ]
+    },
+    {
+      id: "woocommerce",
+      icon: "🛒",
+      name: "WooCommerce",
+      desc: "Checkout, payments, orders",
+      problems: [
+        {
+          id: "woo-checkout-fail",
+          title: "Checkout not completing / order stuck",
+          severity: "high",
+          time: "10–20 min",
+          rootCause: "Payment gateway misconfiguration, SSL issue, or plugin conflict at checkout",
+          summary: "Customers reach the payment page but orders fail to complete. This typically involves SSL configuration, gateway credentials, or a conflicting plugin.",
+          steps: [
+            "Verify SSL is active — your site must use <code>https://</code>. Check in browser address bar.",
+            "Go to <code>WooCommerce → Settings → Payments</code> and confirm the gateway is enabled.",
+            "Test with the payment gateway in sandbox/test mode to isolate real vs config issues.",
+            "Deactivate all plugins except WooCommerce and test checkout. Re-enable one by one.",
+            "Check <code>WooCommerce → Status → Logs</code> for checkout error entries.",
+            "Ensure <code>WooCommerce → Settings → Advanced → Checkout page</code> is correctly assigned."
+          ],
+          tools: ["WooCommerce logs", "Browser dev tools", "Payment gateway dashboard"],
+          tags: ["checkout", "payment-gateway", "SSL", "plugin-conflict", "orders"]
+        },
+        {
+          id: "woo-product-missing",
+          title: "Products not showing on shop page",
+          severity: "medium",
+          time: "5–10 min",
+          rootCause: "Visibility settings, page assignment, or permalink issue",
+          summary: "Products exist in the dashboard but don't appear on the shop/catalog page. Usually a visibility, permalink, or page configuration issue.",
+          steps: [
+            "Go to each product: <code>Edit Product → Publish panel</code> → ensure Catalog Visibility is <code>Shop and search results</code>.",
+            "Check <code>WooCommerce → Settings → Products → Shop page</code> is set to your shop page.",
+            "Go to <code>Settings → Permalinks</code> and click Save (this flushes rewrite rules).",
+            "Check if any product is set to <code>Draft</code> or <code>Private</code> status.",
+            "Temporarily switch to a default WordPress theme to rule out theme conflicts."
+          ],
+          tools: ["WooCommerce product editor", "WordPress permalink settings"],
+          tags: ["products", "catalog", "visibility", "permalinks", "shop"]
+        }
+      ]
+    },
+    {
+      id: "login",
+      icon: "🔐",
+      name: "Login / Access",
+      desc: "Admin lockout, password issues",
+      problems: [
+        {
+          id: "login-lockout",
+          title: "Locked out of WordPress admin",
+          severity: "high",
+          time: "5–15 min",
+          rootCause: "Forgotten password, security plugin blocking access, or corrupted user record",
+          summary: "Cannot access wp-admin. This can be resolved through phpMyAdmin database reset or wp-config.php emergency access.",
+          steps: [
+            "First try: click <code>Lost your password?</code> on wp-login.php and reset via email.",
+            "If no email access: go to hosting cPanel → <code>phpMyAdmin</code>.",
+            "Select your WordPress database → open <code>wp_users</code> table.",
+            "Find your username row → click Edit → set <code>user_pass</code> to a new MD5 hash.",
+            "Generate MD5 hash at: md5hashgenerator.com — paste the hash value.",
+            "Save changes and try logging in with the new password."
+          ],
+          tools: ["phpMyAdmin", "cPanel", "MD5 hash generator"],
+          tags: ["login", "admin-lockout", "password-reset", "phpMyAdmin"]
+        },
+        {
+          id: "login-redirect-loop",
+          title: "Login page keeps redirecting",
+          severity: "medium",
+          time: "5–10 min",
+          rootCause: "Cookie mismatch, wrong site URL in database, or caching plugin",
+          summary: "After entering credentials, the page loops back to login. Usually caused by incorrect siteurl/home settings or a stale cache.",
+          steps: [
+            "Clear all browser cookies for your domain and try again.",
+            "Clear your caching plugin cache (W3 Total Cache, WP Super Cache, etc.).",
+            "Check <code>wp-config.php</code> — ensure <code>WP_HOME</code> and <code>WP_SITEURL</code> match your actual domain.",
+            "In phpMyAdmin, check <code>wp_options</code> rows: <code>siteurl</code> and <code>home</code> — both should match your domain exactly.",
+            "Try accessing <code>yoursite.com/wp-login.php?reauth=1</code> to force fresh auth."
+          ],
+          tools: ["Browser dev tools", "phpMyAdmin", "wp-config.php"],
+          tags: ["login-loop", "redirect", "cookies", "siteurl", "cache"]
+        }
+      ]
+    },
+    {
+      id: "rest-api",
+      icon: "⚙️",
+      name: "REST API / Integrations",
+      desc: "API errors, webhooks, external tools",
+      problems: [
+        {
+          id: "api-401",
+          title: "REST API returning 401 Unauthorized",
+          severity: "medium",
+          time: "10–15 min",
+          rootCause: "Authentication credentials missing or Application Password not configured",
+          summary: "External integrations or headless setups receive 401 errors. Requires Application Passwords setup or JWT authentication configuration.",
+          steps: [
+            "Go to <code>Users → Your Profile</code> → scroll to <code>Application Passwords</code> section.",
+            "Enter a name (e.g. 'API Integration') and click <code>Add New Application Password</code>.",
+            "Copy the generated password immediately — it won't show again.",
+            "In your API request header add: <code>Authorization: Basic base64(username:app-password)</code>.",
+            "Test with a GET request to <code>/wp-json/wp/v2/posts</code> first to confirm auth works.",
+            "If Application Passwords section is missing, check if a security plugin is disabling it."
+          ],
+          tools: ["Postman / Insomnia", "Browser Network tab", "WordPress Application Passwords"],
+          tags: ["REST-API", "401", "authentication", "application-passwords", "JWT"]
+        },
+        {
+          id: "api-disabled",
+          title: "REST API is disabled or returns 404",
+          severity: "medium",
+          time: "5–10 min",
+          rootCause: "Security plugin blocking REST API or permalink structure issue",
+          summary: "The WordPress REST API endpoint returns a 404 or is explicitly disabled by a security plugin.",
+          steps: [
+            "Test API: visit <code>yoursite.com/wp-json/</code> — should return JSON, not 404.",
+            "Go to <code>Settings → Permalinks</code> → click Save to refresh rules.",
+            "Check security plugins (Wordfence, iThemes Security) — look for REST API disable settings.",
+            "Temporarily disable all plugins and test the API endpoint again.",
+            "In <code>wp-config.php</code>, ensure no custom code is using <code>rest_authentication_errors</code> hook to block access."
+          ],
+          tools: ["Browser URL bar", "Postman", "WordPress permalink settings"],
+          tags: ["REST-API", "404", "permalinks", "security-plugin", "disabled"]
+        }
+      ]
+    },
+    {
+      id: "migration",
+      icon: "📦",
+      name: "Migration / Hosting",
+      desc: "Site move, domain change, hosting issues",
+      problems: [
+        {
+          id: "migration-broken",
+          title: "Site broken after migration",
+          severity: "high",
+          time: "15–30 min",
+          rootCause: "Incorrect database URLs, missing files, or wrong wp-config.php settings",
+          summary: "After moving a site to a new host or domain, styles are missing, links are broken, or the site won't load. Database URL replacement is usually required.",
+          steps: [
+            "Verify <code>wp-config.php</code> has correct database name, username, password, and host for the new server.",
+            "In phpMyAdmin, check <code>wp_options</code> — update <code>siteurl</code> and <code>home</code> to the new domain.",
+            "Run a search-replace for old URLs in the database using <code>WP-CLI: wp search-replace 'oldsite.com' 'newsite.com' --all-tables</code>.",
+            "If no CLI access, use the Search Replace DB PHP script (from interconnectit.com) temporarily.",
+            "Check file permissions: <code>wp-content</code> should be 755, files should be 644.",
+            "Clear all caches and test the site from an incognito window."
+          ],
+          tools: ["phpMyAdmin", "WP-CLI", "Search Replace DB script", "FTP"],
+          tags: ["migration", "broken-links", "database", "siteurl", "search-replace"]
+        }
+      ]
+    },
+    {
+      id: "performance",
+      icon: "⚡",
+      name: "Performance / Speed",
+      desc: "Slow loading, timeout errors",
+      problems: [
+        {
+          id: "perf-slow",
+          title: "Site loading very slowly",
+          severity: "medium",
+          time: "20–40 min",
+          rootCause: "No caching, unoptimized images, too many plugins, or poor hosting",
+          summary: "Site takes more than 3 seconds to load. Likely caused by absence of caching, large uncompressed images, or a resource-heavy plugin.",
+          steps: [
+            "Test current speed at <code>pagespeed.web.dev</code> — note the specific recommendations.",
+            "Install a caching plugin: <code>LiteSpeed Cache</code> or <code>W3 Total Cache</code> and enable page caching.",
+            "Install <code>Smush</code> or <code>ShortPixel</code> plugin to compress existing images in bulk.",
+            "Go to <code>Plugins → Installed Plugins</code> — deactivate plugins you don't actively use.",
+            "Check <code>WooCommerce → Status → System Status</code> for any performance warnings.",
+            "Contact hosting support to confirm your plan includes adequate PHP memory (minimum 256MB recommended)."
+          ],
+          tools: ["Google PageSpeed Insights", "Query Monitor plugin", "GTmetrix"],
+          tags: ["performance", "caching", "images", "slow-loading", "optimization"]
+        }
+      ]
+    }
+  ]
+};
+
+let currentCategory = null;
+let currentProblem = null;
+
+function init() {
+  const grid = document.getElementById('categoryGrid');
+  grid.innerHTML = DATA.categories.map(cat => `
+    <button class="cat-btn" onclick="selectCategory('${cat.id}')">
+      <span class="cat-icon">${cat.icon}</span>
+      <div class="cat-name">${cat.name}</div>
+      <div class="cat-desc">${cat.desc}</div>
+    </button>
+  `).join('');
+}
+
+function selectCategory(id) {
+  currentCategory = DATA.categories.find(c => c.id === id);
+  const list = document.getElementById('problemList');
+  document.getElementById('problemLabel').textContent = `Step 02 — ${currentCategory.icon} ${currentCategory.name}`;
+  list.innerHTML = currentCategory.problems.map(p => `
+    <button class="prob-btn" onclick="selectProblem('${p.id}')">${p.title}</button>
+  `).join('');
+  showView('viewProblem');
+  updateSteps(2);
+}
+
+function selectProblem(id) {
+  currentProblem = currentCategory.problems.find(p => p.id === id);
+  renderSolution(currentProblem);
+  showView('viewSolution');
+  updateSteps(3);
+}
+
+function renderSolution(p) {
+  const severityMap = { low: '🟢 Low Severity', medium: '🟡 Medium Severity', high: '🔴 High Severity' };
+  const html = `
+    <span class="severity-badge ${p.severity}">${severityMap[p.severity]}</span>
+    <div class="solution-title">${p.title}</div>
+    <div class="solution-summary">${p.summary}</div>
+
+    <div class="info-boxes">
+      <div class="info-box">
+        <div class="info-box-label">Root Cause</div>
+        <div class="info-box-value">${p.rootCause}</div>
+      </div>
+      <div class="info-box">
+        <div class="info-box-label">Est. Resolution Time</div>
+        <div class="info-box-value">${p.time}</div>
+      </div>
+    </div>
+
+    <div class="steps-section">
+      <div class="steps-title">Diagnostic Steps</div>
+      <div class="step-list">
+        ${p.steps.map(s => `
+          <div class="step-row">
+            <div class="step-dot"></div>
+            <div class="step-content">${s}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="steps-section">
+      <div class="steps-title">Tools Needed</div>
+      <div class="tags">
+        ${p.tools.map(t => `<span class="tag">🔧 ${t}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="steps-section">
+      <div class="steps-title">Related Tags</div>
+      <div class="tags">
+        ${p.tags.map(t => `<span class="tag">#${t}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="goBack('viewCategory'); updateSteps(1)">🔍 Diagnose Another Issue</button>
+      <button class="btn btn-ghost" onclick="goBack('viewProblem')">← Different Problem</button>
+    </div>
+  `;
+  document.getElementById('solutionContent').innerHTML = html;
+}
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goBack(viewId) {
+  showView(viewId);
+  updateSteps(viewId === 'viewCategory' ? 1 : 2);
+}
+
+function updateSteps(active) {
+  [1,2,3].forEach(n => {
+    const el = document.getElementById(`step${n}`);
+    el.className = 'step-item';
+    if (n < active) el.classList.add('done');
+    else if (n === active) el.classList.add('active');
+  });
+}
+
+function filterCategories(query) {
+  const q = query.toLowerCase();
+  if (!q) { init(); return; }
+  const grid = document.getElementById('categoryGrid');
+  const matches = [];
+  DATA.categories.forEach(cat => {
+    cat.problems.forEach(p => {
+      if (p.title.toLowerCase().includes(q) || p.tags.some(t => t.includes(q)) || cat.name.toLowerCase().includes(q)) {
+        matches.push({ cat, prob: p });
+      }
+    });
+  });
+  if (matches.length === 0) {
+    grid.innerHTML = `<div style="color:var(--muted);font-size:14px;grid-column:1/-1;padding:20px 0">No matching issues found. Try: "checkout", "white screen", "login", "API"</div>`;
+    return;
+  }
+  grid.innerHTML = matches.map(m => `
+    <button class="cat-btn" onclick="quickSelect('${m.cat.id}','${m.prob.id}')">
+      <span class="cat-icon">${m.cat.icon}</span>
+      <div class="cat-name">${m.prob.title}</div>
+      <div class="cat-desc">${m.cat.name}</div>
+    </button>
+  `).join('');
+}
+
+function quickSelect(catId, probId) {
+  currentCategory = DATA.categories.find(c => c.id === catId);
+  currentProblem = currentCategory.problems.find(p => p.id === probId);
+  renderSolution(currentProblem);
+  showView('viewSolution');
+  updateSteps(3);
+}
+
+init();
+</script>
+</body>
+</html>
